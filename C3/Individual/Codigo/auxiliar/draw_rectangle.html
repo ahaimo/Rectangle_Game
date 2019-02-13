@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+  <canvas id="myCanvas" width="300" height="300" style="border:1px solid #d3d3d3;">
+  </canvas>
+  <p id="text"></p>
+</body>
+
+<script>
+
+
+
+var canvas = document.getElementById("myCanvas"),
+    ctx = canvas.getContext("2d"),
+    canvas_rect = canvas.getBoundingClientRect()
+
+
+function printMousePos(event) {
+  document.getElementById("text").innerHTML =
+    "clientX: " + Number (event.clientX - canvas_rect.left) +
+    " - clientY: " + Number(event.clientY - canvas_rect.top);
+}
+document.addEventListener("click", printMousePos);
+canvas.addEventListener("click",select_examples);
+function select_examples(e){
+    getPosition(e);
+};
+function getPosition(event){
+     var x = event.clientX - canvas_rect.left; // x == the location of the click in the document - the location (relative to the left) of the canvas in the document
+     var y = event.clientY - canvas_rect.top; // y == the location of the click in the document - the location (relative to the top) of the canvas in the document
+     // This method will handle the coordinates and will draw them in the canvas.
+     drawCoordinates(x,y);
+};
+
+
+// Red rectangle
+ctx.beginPath();
+ctx.lineWidth = "6";
+ctx.strokeStyle = "red";
+ctx.rect(5, 5, 290, 140);
+ctx.stroke();
+
+
+// Green rectangle
+ctx.beginPath();
+ctx.lineWidth = "6";
+ctx.strokeStyle = "green";
+ctx.rect(5, 5, 290, 140);
+ctx.stroke();
+
+// Blue rectangle
+ctx.beginPath();
+ctx.lineWidth = "10";
+ctx.strokeStyle = "blue";
+ctx.rect(50, 50, 150, 80);
+ctx.stroke();
+</script>
+
+
+</html>

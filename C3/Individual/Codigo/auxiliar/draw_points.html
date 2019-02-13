@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My experiment</title>
+    </head>
+
+
+
+
+    <p id='text'>HOLA</p>
+    <canvas id="canvas" width="690" height="651" style="cursor:crosshair;background:url(http://www.mundoanimalia.com/images/articles/66/58/06/7f6ffaa6bb0b408017b62254211691b5/gallina.jpg)"></canvas>
+    <p>After canvas.</p>
+    <script>
+
+
+
+     let canvas = document.querySelector("canvas");
+     //let ctxt = canvas.getContext("2d");
+      // context.fillStyle = "red";
+      // context.fillRect(10, 10, 100, 50);
+
+      var pointSize = 10;
+
+      // PRINT MOUS CLICK
+      document.addEventListener("click", printMousePos);
+      function printMousePos(event) {
+        var canvas_rect = canvas.getBoundingClientRect();
+        document.getElementById("text").innerHTML =
+          "clientX: " + Number (event.clientX - canvas_rect.left) +
+          " - clientY: " + Number(event.clientY - canvas_rect.top);
+      }
+
+      canvas.addEventListener("click",function(e){getPosition(e)});
+      function getPosition(event){
+           var rect = canvas.getBoundingClientRect();
+           var x = event.clientX - rect.left;
+           var y = event.clientY - rect.top;
+           drawCoordinates(x,y);
+      }
+
+      function drawCoordinates(x,y){
+          var ctx = document.getElementById("canvas").getContext("2d");
+          ctx.fillStyle = "#ff2626"; // Red color
+          ctx.beginPath();
+          ctx.arc(x, y, pointSize, 0, Math.PI * 2, true);
+          ctx.fill();
+      }
+
+
+
+
+    </script>
+
+
+
+
+
+</html>

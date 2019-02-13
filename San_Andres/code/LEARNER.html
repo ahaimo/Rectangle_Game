@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>My experiment</title>
+        <script src="jspsych-6.0.1/jspsych.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-fullscreen.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-html-button-response.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-image-button-response.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-call-function.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-survey-text.js"></script>
+        <script src="http://glyc.dc.uba.ar/socket.io/socket.io.js"></script>
+	      <script src="jspsych-6.0.1/jspsych-node.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-node-wait.js"></script>
+        <script src="jspsych-6.0.1/plugins/jspsych-node-waiting-room.js"></script>
+        <script src="my_plugins/check_point_button.js"></script>
+        <script src="my_plugins/my_image_button.js"></script>
+        <script src="my_plugins/learner.js"></script>
+        <script src="my_plugins/learner_prueba.js"></script>
+        <link href="jspsych-6.0.1/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+        <meta charset="utf-8">
+    </head>
+
+    <body>
+    </body>
+
+    <script>
+
+        var Rol="learner"
+
+        var n_trials=999, // CANTIDAD DE TRIALS POR NIVEL
+            n_levels=1, // CANTIDAD DE NIVELES
+            n_trials_prueba=0
+
+        var number_of_examples=1 // CANTIDAD DE PISTAS ENTREGADAS POR INTENTO
+        var pointSize=5;
+
+        var timeline=[],
+            nivel_timeline=[],
+            prueba_timeline=[],
+            nivel=0;
+            trial_counter=0;
+            accum_score=0;
+
+        var audio_correct = new Audio('sounds/correct.mp3')
+    		var audio_wrong = new Audio('sounds/wrong.mp3')
+    		var audio_win = new Audio('sounds/win.mp3')
+
+        var did_not_win = {
+          type: "image-button-response",
+          stimulus:"img/thumb_down.png",
+          prompt: function(){
+                  if(accum_score==0){
+                    return "<font color='black' size='30px'> SE ACABARON LAS PISTAS </font>"
+                  } else{
+                    return "<font color='black' size='30px'> SE ACABARON LAS PISTAS  <br> <br> TIENEN </font> <font color='blue' size='30px'>" + String(accum_score) + "</font><font color='black' size='30px'> PUNTOS</font>"
+                  }
+          },
+          on_load: function() {audio_wrong.play()},
+          trial_duration: 2000
+        };
+
+        var did_win = {
+          type: "image-button-response",
+          stimulus: "img/thumb_up.png",
+          prompt: function(){
+            trial_score=jsPsych.data.getLastTrialData().select("score").values[0] ;
+            accum_score += trial_score;
+            if(trial_score ==accum_score ){
+                return "<font color='black' size='30px'> ¡GANARON </font> <font color='red' size='30px'>"+String(trial_score) +"</font> <font color='black' size='30px'>PUNTOS!</font>"
+            }
+            else {
+                return "<font color='black' size='30px'> ¡GANARON </font> <font color='red' size='30px'>"+String(trial_score) +"</font> <font color='black' size='30px'>PUNTOS! <br> <br> <br> <br> <font color='black' size='30px'> YA TIENEN <font color='blue' size='30px'>" + String(accum_score) + "</font>  <font color='black' size='30px'>PUNTOS!</font>"
+            }
+          },
+          on_load: function() {audio_correct.play()},
+          trial_duration: 2000
+        };
+
+
+
+        // CREATE TIMELINE
+        for(i=0; i<n_trials ; i++){
+          nivel_timeline.push({});
+
+          nivel_timeline.push({
+            timeline: [did_not_win],
+            conditional_function: function(){
+              var results = jsPsych.data.get().select("won").values;
+              return !results[results.length-1];
+            }
+          });
+
+          nivel_timeline.push({
+            timeline: [did_win],
+            conditional_function: function(){
+              var results = jsPsych.data.get().select("won").values;
+              return results[results.length-1];
+            }
+          });
+        };
+
+        // PRUEBA TIMELINE
+        for(i=0; i<n_trials_prueba ; i++){
+          prueba_timeline.push({});
+          prueba_timeline.push({
+            timeline: [did_not_win],
+            conditional_function: function(){
+              var results = jsPsych.data.get().select("won").values;
+              return !results[results.length-1];
+            }
+          });
+          prueba_timeline.push({
+            timeline: [did_win],
+            conditional_function: function(){
+              var results = jsPsych.data.get().select("won").values;
+              return results[results.length-1];
+            }
+          });
+        };
+
+
+
+        var go_fullscreen={
+          type: 'fullscreen',
+          fullscreen_mode: true,
+          message:'',
+          button_label:'COMENZAR'
+        };
+
+        var size_of_canvas=[0.8*Math.min(screen.width,screen.height),0.8*Math.min(screen.width,screen.height)];
+
+	      var experiment_id;
+
+        var enter_id = {
+          type: 'survey-text',
+          questions: [
+          {prompt: 'Identificación Propia (L):', value: '', rows: 1, columns: 10},
+          {prompt: 'Identificación Otro (T):', value: '', rows: 1, columns: 10}
+          ],
+          button_label: 'Continuar',
+          on_finish: function(data){
+            var responses = JSON.parse(data.responses);
+            var id = responses.Q0;
+            var id_rival = responses.Q1;
+            var start_time = Date.now();
+            jsPsych.data.addProperties({
+              start_time: start_time,
+              id_teacher: id_rival,
+              id_learner: id
+            });
+            experiment_id = id_rival;
+          }
+        };
+
+
+
+        var prueba ={
+          type: Rol,
+          number_of_examples: number_of_examples,
+          pointSize: pointSize,
+          canvas_size: size_of_canvas,
+          timeline: prueba_timeline
+        };
+
+
+
+        var check_comprension={
+          type: "check_point_button",
+          stimulus: function(){return "<p><font size='25px'>ENTONCES, ¿QUÉ TENÉS QUE HACER? </font></p>"},
+          background_image: "",
+          choices: ['S', 'N'],
+        };
+
+
+        var comenzar={
+            type: "html-button-response",
+            stimulus:"<p align='center' style='font-size:35px;' > </p>",
+            //stimulus: "<p align='center' style='font-size:35px;' > EL JUEGO TIENE "+ String(n_levels) + " NIVELES <br> ¿LISTX PARA EMPEZAR? </p>",
+            choices: ['EMPEZAR'] // button_label
+        }
+
+
+
+        var middle_check_teacher={
+            type: "html-button-response",
+            stimulus: "<p align='center' style='font-size:25px;' > ¡ACORDATE DE QUE CON ESTAS PISTAS OTRO JUGADOR TENDRÁ QUE ADIVINAR EN DÓNDE ESTÁ LA CAJA! </p>",
+            choices: ['CONTINUAR'], // button_label
+        }
+
+        var trials = {
+          type: Rol,
+          number_of_examples: number_of_examples,
+          pointSize: pointSize,
+          canvas_size: size_of_canvas,
+          on_start: function(){ trial_counter++;
+                                if(trial_counter % n_trials ==0 ){
+                                    nivel++
+                                }
+                              },
+          on_finish: function(data) {
+            if (jsPsych.data.getLastTrialData().select("escape_trial").values[0] ){
+              jsPsych.endCurrentTimeline()
+            }
+          },
+          timeline: nivel_timeline
+        };
+
+        var check_point={
+          type: "check_point_button",
+          stimulus: function(){return "<p><font size='25'>¡FELICITACIONES! <br><br> TERMINARON EL NIVEL "+ String(nivel/2) +" </font></p>"},
+          background_image: function(){return "background_images/img_"+String(nivel/2) +".png"},
+          choices: ['PASAR AL SIGUIENTE NIVEL', 'SALIR'],
+          on_finish: function(data){
+            if(data.button_pressed==1){
+              jsPsych.endExperiment( "<p align='center' style='font-size:30px;' > TERMINÓ EL JUEGO  <br><br> ¡FELICITACIONES!</p>");
+            }
+          }
+        };
+
+
+
+        var if_node = {
+          timeline: [trials,check_point],
+          loop_function: function(){
+            var data = jsPsych.data.get().last(1).values()[0];
+            if(nivel== max_level/2){
+              return false;
+            } else if(data.button_pressed == 1) {
+              exit_flag=true;
+              jsPsych.data.get().localSave('csv',jsPsych.data.get().first(1).select("Id").values+'.csv');
+            } else{
+              return true;
+            }
+          }
+        };
+
+
+        var goodbye={
+          type: "check_point_button",
+          stimulus: function(){
+            accum_score=Math.max(accum_score,50);
+            return "<font color='black' size='30px' > ¡TERMINÓ EL JUEGO!  <br><br> GANARON </font> <font color='blue' size='30px' >"+String(accum_score)+" </font><font color='black' size='30px' > PUNTOS </font>"
+          },
+          background_image: function(){return "background_images/img_3.png"},
+          on_start: function(){
+            var id_teacher = jsPsych.data.get().first(1).select("id_teacher").values.toString();
+            var id_learner = jsPsych.data.get().first(1).select("id_learner").values.toString();
+            jsPsych.data.get().localSave('csv',id_teacher+'_'+id_learner+'_'+Rol+'_'+String(Date.now())+'.csv');
+          },
+          on_load: function() {audio_win.play()},
+          choices: ['SALIR']
+        };
+
+        var wait_player = {
+         type: "waiting-room",
+         title: "Esperando",
+         text: "El experimento continuará cuando esté listo el otro jugador",
+         experiment: function(){return experiment_id;},
+         participants: 2
+       };
+
+
+       timeline=[go_fullscreen,enter_id,
+                 wait_player,
+                 comenzar,wait_player,trials,goodbye];
+
+       //for(i=0; i<n_levels-1; i++){
+      //     timeline.push(trials, check_point, wait_player);
+      //   };
+       //timeline.push(trials,goodbye);
+
+
+
+        // LEARNER TIMELINE
+        jsPsych.node.connect("http://glyc.dc.uba.ar");
+
+        jsPsych.init({
+              timeline: timeline,
+              //on_finish: function(){
+              //  var id_teacher = jsPsych.data.get().first(1).select("id_teacher").values.toString();
+              //  var id_learner = jsPsych.data.get().first(1).select("id_learner").values.toString();
+              //  jsPsych.data.get().localSave('csv',id_teacher+'_'+id_learner+'_'+Rol+'_dynamic.csv');
+              //}
+            })
+
+
+//jsPsych.data.displayData();
+
+
+        </script>
+
+</html>
